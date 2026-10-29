@@ -184,6 +184,18 @@ What you **cannot** pre-compute — and what the exploit leaks live each run —
 ASLR bases (where the heap and `libphp.so` are mapped this request). See
 [`real-vm/OFFSETS_FROM_TARGET.md`](real-vm/OFFSETS_FROM_TARGET.md).
 
+> ⚠️ **`p2s_target_vars.sh` reads the machine it runs on.** On a real engagement you run
+> it *on the target* (or point it at a copy of the target's `libphp.so`). Run it on your
+> own laptop and it reads *your* PHP, not the target's.
+
+**Want to try the offset tooling against the lab?** The lab targets are containers, so
+copy one's module out first, then drive the PoC from it:
+
+```bash
+docker cp php2shell-8.4:/usr/lib/apache2/modules/libphp.so ./libphp-8.4.so
+./real-vm/p2s_offtest.sh -u http://127.0.0.1:8084/ --libphp ./libphp-8.4.so
+```
+
 ---
 
 ## Why it's hard to exploit (and why that matters)
@@ -324,6 +336,16 @@ restrained (non-destructive scan, blind timing, overt webroot read-back) precise
 they can be used in a real assessment without covert staging or data exfiltration.
 
 Don't point any of this at systems you don't have permission to test.
+
+---
+
+## Status & feedback
+
+🚧 **This project is under active development.** Things may change, and rough edges are
+expected. If you hit a bug, a broken command, or something that's unclear — or you land
+the PoC on a build that isn't in the offset database — we'd genuinely like to hear about
+it: **[info@redsidesecurity.com](mailto:info@redsidesecurity.com)**. Please include the
+PHP version/build, your OS, and the exact command and output.
 
 ---
 
