@@ -8,7 +8,7 @@
 
 **Detect it. Blindly prove it. Understand it** — on targets that behave like real servers,<br>not a rigged demo. No shared mounts, no planted files, no LFI.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-5ea9ef.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-ef4444.svg)](LICENSE)
 &nbsp;![CVE](https://img.shields.io/badge/CVE-109618%20%2F%20109619-e8705b.svg)
 &nbsp;![PHP](https://img.shields.io/badge/PHP-8.3%20%7C%208.4%20%7C%208.5-777bb4.svg?logo=php&logoColor=white)
 &nbsp;![Status](https://img.shields.io/badge/status-under%20development-f0a868.svg)
