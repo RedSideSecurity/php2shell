@@ -1,12 +1,20 @@
 <div align="center">
 
+![php2shell — pre-auth RCE lab & toolkit](docs/img/banner.png)
+
 # php2shell
 
-**A realistic, self-contained lab + toolkit for CVE-2026-109618 / CVE-2026-109619 — the PHP "php2shell" pre-auth RCE.**
+### A realistic lab &amp; toolkit for the PHP *php2shell* pre-auth RCE — **CVE-2026-109618 / 109619**
 
-Detect it. Prove it. Understand it. On a lab that behaves like a real server, not a rigged demo.
+**Detect it. Blindly prove it. Understand it** — on targets that behave like real servers,<br>not a rigged demo. No shared mounts, no planted files, no LFI.
 
-_by [RedSide Security](https://github.com/RedSideSecurity)_
+[![License: MIT](https://img.shields.io/badge/License-MIT-5ea9ef.svg)](LICENSE)
+&nbsp;![CVE](https://img.shields.io/badge/CVE-109618%20%2F%20109619-e8705b.svg)
+&nbsp;![PHP](https://img.shields.io/badge/PHP-8.3%20%7C%208.4%20%7C%208.5-777bb4.svg?logo=php&logoColor=white)
+&nbsp;![Status](https://img.shields.io/badge/status-under%20development-f0a868.svg)
+&nbsp;![Proof](https://img.shields.io/badge/proof-blind%20%7C%20no--artifact-2ea043.svg)
+
+_by [**RedSide Security**](https://github.com/RedSideSecurity)_ · questions &amp; bugs → **info@redsidesecurity.com**
 
 </div>
 
