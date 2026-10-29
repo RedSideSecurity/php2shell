@@ -1,0 +1,57 @@
+{
+  "_comment": "php2shell offset database. Each entry pins the offsets for ONE libphp.so build. 'build_id' (GNU build-id) and 'sha256' are exact keys you can match even against a STRIPPED target, as long as you have a copy of its libphp.so (same distro package == same build_id). 'php_version'+'source' are the fuzzy key used by --php wordlist mode. zif/dtor are in-file symbol offsets; htdata is the Zend-MM chunk-relative offset (tracks the build's heap layout). verified=true means a full RCE was observed on this exact build.",
+  "entries": [
+    {
+      "php_version": "8.3.6",
+      "source": "ubuntu 24.04 (8.3.6-0ubuntu0.24.04.13)",
+      "build_id": "78383fa7165695040679398356430158035b9874",
+      "sha256": "",
+      "zif_offset": "0x2371c0",
+      "dtor_offset": "0x30dbc0",
+      "htdata_offset": "0x6A0D8",
+      "verified": false,
+      "note": "zif/dtor from ddebs dbgsym (build-id verified); htdata guessed, sweep to confirm."
+    },
+    {
+      "php_version": "8.5.11",
+      "source": "official php:8.5-apache (debian trixie)",
+      "build_id": "13ba090198423880ce5847c4e3f92c48f2385a72",
+      "sha256": "",
+      "zif_offset": "0x5996e0",
+      "dtor_offset": "0x7b47a0",
+      "htdata_offset": "0x690D8",
+      "verified": true
+    },
+    {
+      "php_version": "8.4.26",
+      "source": "official php:8.4-apache (debian trixie)",
+      "build_id": "a534a5c4a890b378ef6c227590627d531eafa8ce",
+      "sha256": "",
+      "zif_offset": "0x465370",
+      "dtor_offset": "0x65eb60",
+      "htdata_offset": "0x690D8",
+      "verified": true
+    },
+    {
+      "php_version": "8.3.35",
+      "source": "official php:8.3-apache (debian trixie)",
+      "build_id": "6750eb9dbdf140fb6f76592d078784272ec1c7ca",
+      "sha256": "",
+      "zif_offset": "0x3ac080",
+      "dtor_offset": "0x49ec50",
+      "htdata_offset": "0x6A0D8",
+      "verified": true
+    },
+    {
+      "php_version": "8.2.34",
+      "source": "official php:8.2-apache (debian trixie)",
+      "build_id": "432b9cdfc44ab0205ee9f81d234d14e474e9aeb6",
+      "sha256": "",
+      "zif_offset": "0x39b8a0",
+      "dtor_offset": "0x487650",
+      "htdata_offset": null,
+      "verified": false,
+      "note": "8.2 is OOM-vulnerable (scanner flags it) but this RCE grooming chain does not land on 8.2; htdata not profiled."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+php2shell — RedSide Security
+============================
+
+This project is licensed under the MIT License (see LICENSE).
+
+Third-party components
+----------------------
+exploit/engine/  — low-level PHP heap use-after-free chain primitive
+    (HTTP worker rotation + two-stage info-leak + fake-HashTable trigger).
+    MIT License, Copyright (c) 2026 3em0. The original MIT license text is
+    retained at exploit/engine/LICENSE, as that license requires. RedSide's
+    dynamic-ASLR calibration is applied on top (exploit/php2shell-dynamic-aslr.patch).
+
+Everything else in this repository — the realistic multi-version lab, the
+detection scanner, the blind (no-artifact) exploitability verifier, the
+per-build offset database and extraction tooling, and the consolidated driver
+— is RedSide Security's own work.

@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.swp
+*.zip
+out/
+real-vm/offsets.env
+real-vm/results_matrix.csv
+*.log

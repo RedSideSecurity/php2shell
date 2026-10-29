@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PHP2Shell Lab Setup</title>
+<style>
+:root {
+  --bg: #f7f7f5; --fg: #1d1d1b; --muted: #5f5f5a; --card: #ffffff; --line: #e2e2dc;
+  --code-bg: #f0f0eb; --accent: #2457c5; --warn-bg: #fff4e0; --warn-line: #e3a33b;
+  --ok: #1f7a3d; --bad: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --fg: #e8e8e3; --muted: #a3a39c; --card: #1f1f1d; --line: #33332f;
+    --code-bg: #262623; --accent: #7aa2ff; --warn-bg: #2e2516; --warn-line: #b8862e;
+    --ok: #5cc27e; --bad: #f08a80;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161615; --fg: #e8e8e3; --muted: #a3a39c; --card: #1f1f1d; --line: #33332f;
+  --code-bg: #262623; --accent: #7aa2ff; --warn-bg: #2e2516; --warn-line: #b8862e;
+  --ok: #5cc27e; --bad: #f08a80;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 880px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 1.9rem; margin: 0 0 4px; }
+h2 { font-size: 1.3rem; margin: 40px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+h3 { font-size: 1.05rem; margin: 24px 0 6px; }
+p.lead { color: var(--muted); margin-top: 0; }
+a { color: var(--accent); }
+code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+.block { position: relative; margin: 8px 0 16px; }
+.block .label { font: 12px ui-monospace, monospace; color: var(--muted); margin-bottom: 2px; }
+pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 14px; overflow-x: auto; font: 13.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+pre code { background: none; padding: 0; }
+button.copy { position: absolute; top: 22px; right: 8px; font: 12px system-ui, sans-serif;
+  background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
+  padding: 3px 8px; cursor: pointer; }
+button.copy:hover { border-color: var(--accent); }
+.block.nolabel button.copy { top: 8px; }
+.warn { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 10px 14px;
+  border-radius: 6px; margin: 16px 0; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 0.95rem; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+ol, ul { padding-left: 22px; }
+li { margin: 4px 0; }
+.ok { color: var(--ok); font-weight: 600; }
+.bad { color: var(--bad); font-weight: 600; }
+nav.toc { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; margin: 20px 0; }
+nav.toc ol { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>PHP2Shell Lab Setup</h1>
+<p class="lead">Four Docker containers, one per supported PHP branch, each on the last release before the
+CVE-2026-109618 / CVE-2026-109619 fix. Apache + mod_php (prefork), PHP default settings.</p>
+
+<div class="warn"><strong>Lab only.</strong> These containers run intentionally vulnerable PHP.
+Bind them to <code>127.0.0.1</code> or an isolated network, never to a public interface, and remove them when done.</div>
+
+<nav class="toc"><strong>Contents</strong>
+<ol>
+<li><a href="#overview">What the lab contains</a></li>
+<li><a href="#prereq">Prerequisites</a></li>
+<li><a href="#files">Create the files</a></li>
+<li><a href="#run">Build and start</a></li>
+<li><a href="#verify">Verify each container</a></li>
+<li><a href="#compare">Optional: patched and mitigated comparisons</a></li>
+<li><a href="#trouble">Troubleshooting</a></li>
+<li><a href="#cleanup">Stop and clean up</a></li>
+</ol></nav>
+
+<h2 id="overview">1. What the lab contains</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Container</th><th>Base image</th><th>PHP</th><th>Fixed in</th><th>Local URL</th></tr></thead>
+<tbody>
+<tr><td><code>php2shell-8.2</code></td><td><code>php:8.2.34-apache</code></td><td>8.2.34</td><td>8.2.35</td><td><a href="http://127.0.0.1:8082/">127.0.0.1:8082</a></td></tr>
+<tr><td><code>php2shell-8.3</code></td><td><code>php:8.3.35-apache</code></td><td>8.3.35</td><td>8.3.36</td><td><a href="http://127.0.0.1:8083/">127.0.0.1:8083</a></td></tr>
+<tr><td><code>php2shell-8.4</code></td><td><code>php:8.4.26-apache</code></td><td>8.4.26</td><td>8.4.27</td><td><a href="http://127.0.0.1:8084/">127.0.0.1:8084</a></td></tr>
+<tr><td><code>php2shell-8.5</code></td><td><code>php:8.5.11-apache</code></td><td>8.5.11</td><td>8.5.12</td><td><a href="http://127.0.0.1:8085/">127.0.0.1:8085</a></td></tr>
+</tbody></table></div>
+<p>Every container sets the same exposure-relevant options explicitly (all are PHP defaults):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Setting</th><th>Value</th><th>Relevant to</th></tr></thead>
+<tbody>
+<tr><td><code>memory_limit</code></td><td>128M</td><td>Both CVEs: a finite limit gives the predictable out-of-memory error</td></tr>
+<tr><td><code>post_max_size</code> / <code>max_file_uploads</code></td><td>8M / 20</td><td>CVE-2026-109618: multipart parsing limits that can be bypassed</td></tr>
+<tr><td><code>max_input_vars</code> / <code>max_input_nesting_level</code></td><td>1000 / 64</td><td>CVE-2026-109618: nested fields multiply allocations</td></tr>
+<tr><td><code>session.upload_progress.enabled</code></td><td>On</td><td>CVE-2026-109619: upload-progress path, no <code>session_start()</code> needed</td></tr>
+<tr><td><code>fatal_error_backtraces</code> (8.5 only)</td><td>On</td><td>CVE-2026-109619: confirmed mod_php path</td></tr>
+<tr><td><code>file_uploads</code></td><td>On</td><td>Default; the advisories do not list it as a requirement</td></tr>
+</tbody></table></div>
+
+<h2 id="prereq">2. Prerequisites</h2>
+<ul>
+<li>Docker Engine 20+ on Linux (also works with Docker Desktop). Check with <code>docker version</code>.</li>
+<li><code>curl</code> for the verification steps.</li>
+<li>About 2 GB of disk for the four images, and free local ports 8082–8085.</li>
+<li>Docker Compose is <em>not</em> required; the scripts use plain <code>docker build</code> / <code>docker run</code>.</li>
+</ul>
+
+<h2 id="files">3. Create the files</h2>
+<p>If you already have the <code>php2shell-lab/</code> folder, skip to <a href="#run">step 4</a>. Otherwise create this layout:</p>
+<div class="block nolabel"><pre><code>php2shell-lab/
+├── run.sh
+├── stop.sh
+├── php-8.2/  Dockerfile  php2shell.ini  index.php
+├── php-8.3/  Dockerfile  php2shell.ini  index.php
+├── php-8.4/  Dockerfile  php2shell.ini  index.php
+└── php-8.5/  Dockerfile  php2shell.ini  index.php</code></pre></div>
+
+<h3>Dockerfile (one per folder)</h3>
+<p>Identical in each folder except the version in the <code>FROM</code> line and header comment:
+<code>8.2.34</code>, <code>8.3.35</code>, <code>8.4.26</code>, <code>8.5.11</code>. Example for 8.2:</p>
+<div class="block"><div class="label">php-8.2/Dockerfile</div><pre><code># PHP2Shell lab: PHP 8.2.34 (last release before the CVE-2026-109618/109619 fix in 8.2.x)
+# Apache + mod_php (prefork) - the SAPI with confirmed RCE for both CVEs.
+# LAB ONLY: intentionally vulnerable. Bind to 127.0.0.1, never expose publicly.
+FROM php:8.2.34-apache
+
+COPY php2shell.ini /usr/local/etc/php/conf.d/zz-php2shell.ini
+COPY index.php /var/www/html/index.php
+
+EXPOSE 80</code></pre></div>
+
+<h3>php2shell.ini</h3>
+<p>Same for 8.2, 8.3 and 8.4:</p>
+<div class="block"><div class="label">php-8.2/php2shell.ini</div><pre><code>; Minimum configuration for PHP2Shell exposure = PHP defaults, set explicitly.
+file_uploads = On
+memory_limit = 128M
+post_max_size = 8M
+upload_max_filesize = 2M
+max_file_uploads = 20
+max_input_vars = 1000
+max_input_nesting_level = 64
+
+; CVE-2026-109619 upload-progress path (default On, no session_start() needed)
+session.upload_progress.enabled = On
+session.upload_progress.cleanup = On
+session.upload_progress.name = &quot;PHP_SESSION_UPLOAD_PROGRESS&quot;</code></pre></div>
+<p>The 8.5 version adds <code>fatal_error_backtraces</code>:</p>
+<div class="block"><div class="label">php-8.5/php2shell.ini</div><pre><code>; Minimum configuration for PHP2Shell exposure = PHP defaults, set explicitly.
+file_uploads = On
+memory_limit = 128M
+post_max_size = 8M
+upload_max_filesize = 2M
+max_file_uploads = 20
+max_input_vars = 1000
+max_input_nesting_level = 64
+
+; CVE-2026-109619 upload-progress path (default On, no session_start() needed)
+session.upload_progress.enabled = On
+session.upload_progress.cleanup = On
+session.upload_progress.name = &quot;PHP_SESSION_UPLOAD_PROGRESS&quot;
+
+; PHP 8.5 only: confirmed CVE-2026-109619 path (default On)
+fatal_error_backtraces = On</code></pre></div>
+
+<h3>index.php (same in every folder)</h3>
+<p>Prints the PHP version, the SAPI, the effective settings, and how many POST fields and files were parsed.</p>
+<div class="block"><div class="label">php-8.2/index.php</div><pre><code>&lt;?php
+header(&#x27;Content-Type: text/plain&#x27;);
+$keys = [&#x27;file_uploads&#x27;, &#x27;memory_limit&#x27;, &#x27;post_max_size&#x27;, &#x27;max_file_uploads&#x27;,
+         &#x27;max_input_vars&#x27;, &#x27;max_input_nesting_level&#x27;, &#x27;session.upload_progress.enabled&#x27;];
+if (PHP_VERSION_ID &gt;= 80500) $keys[] = &#x27;fatal_error_backtraces&#x27;;
+echo &quot;PHP_VERSION=&quot; . PHP_VERSION . &quot;\nSAPI=&quot; . PHP_SAPI . &quot;\n&quot;;
+foreach ($keys as $k) echo &quot;$k=&quot; . var_export(ini_get($k), true) . &quot;\n&quot;;
+echo &quot;method=&quot; . $_SERVER[&#x27;REQUEST_METHOD&#x27;] . &quot; post_fields=&quot; . count($_POST) . &quot; files=&quot; . count($_FILES) . &quot;\n&quot;;</code></pre></div>
+
+<h3>run.sh and stop.sh</h3>
+<div class="block"><div class="label">run.sh</div><pre><code>#!/bin/sh
+# Build and start all four labs, bound to localhost only.
+# 8.2 -&gt; :8082, 8.3 -&gt; :8083, 8.4 -&gt; :8084, 8.5 -&gt; :8085
+cd &quot;$(dirname &quot;$0&quot;)&quot;
+for b in 8.2 8.3 8.4 8.5; do
+  p=808${b#8.}
+  docker build -q -t php2shell-lab:$b php-$b &gt;/dev/null || exit 1
+  docker rm -f php2shell-$b &gt;/dev/null 2&gt;&amp;1
+  docker run -d --name php2shell-$b -p 127.0.0.1:$p:80 php2shell-lab:$b &gt;/dev/null &amp;&amp; echo &quot;php2shell-$b -&gt; http://127.0.0.1:$p/&quot;
+done</code></pre></div>
+<div class="block"><div class="label">stop.sh</div><pre><code>#!/bin/sh
+docker rm -f php2shell-8.2 php2shell-8.3 php2shell-8.4 php2shell-8.5</code></pre></div>
+<div class="block nolabel"><pre><code>chmod +x run.sh stop.sh</code></pre></div>
+
+<h2 id="run">4. Build and start</h2>
+<h3>All four at once</h3>
+<div class="block nolabel"><pre><code>cd php2shell-lab
+./run.sh</code></pre></div>
+<p>Expected output (the first run pulls the base images and takes a few minutes; a
+<em>"legacy builder is deprecated"</em> notice is harmless):</p>
+<div class="block nolabel"><pre><code>php2shell-8.2 -&gt; http://127.0.0.1:8082/
+php2shell-8.3 -&gt; http://127.0.0.1:8083/
+php2shell-8.4 -&gt; http://127.0.0.1:8084/
+php2shell-8.5 -&gt; http://127.0.0.1:8085/</code></pre></div>
+
+<h3>One version only</h3>
+<div class="block nolabel"><pre><code>docker build -t php2shell-lab:8.3 php-8.3
+docker run -d --name php2shell-8.3 -p 127.0.0.1:8083:80 php2shell-lab:8.3</code></pre></div>
+
+<h2 id="verify">5. Verify each container</h2>
+<h3>5.1 Containers are up</h3>
+<div class="block nolabel"><pre><code>docker ps --filter name=php2shell --format '{{.Names}}\t{{.Status}}\t{{.Ports}}'</code></pre></div>
+<p>Expect four rows, each <code>Up …</code> and bound to <code>127.0.0.1:808x-&gt;80/tcp</code>.</p>
+
+<h3>5.2 Version and settings (GET)</h3>
+<div class="block nolabel"><pre><code>for p in 8082 8083 8084 8085; do echo "== :$p"; curl -s http://127.0.0.1:$p/; done</code></pre></div>
+<p>Expected for each port (8.5 also shows <code>fatal_error_backtraces='1'</code>):</p>
+<div class="block nolabel"><pre><code>PHP_VERSION=8.2.34
+SAPI=apache2handler
+file_uploads='1'
+memory_limit='128M'
+post_max_size='8M'
+max_file_uploads='20'
+max_input_vars='1000'
+max_input_nesting_level='64'
+session.upload_progress.enabled='1'
+method=GET post_fields=0 files=0</code></pre></div>
+
+<h3>5.3 Multipart parsing (harmless POST)</h3>
+<p>Sends one upload-progress field, one normal field and a tiny file. This exercises the multipart
+code path both CVEs sit in, without triggering anything.</p>
+<div class="block nolabel"><pre><code>echo test &gt; /tmp/t.txt
+for p in 8082 8083 8084 8085; do
+  printf ":$p  "
+  curl -s -F PHP_SESSION_UPLOAD_PROGRESS=lab -F field=1 -F f=@/tmp/t.txt http://127.0.0.1:$p/ | tail -1
+done</code></pre></div>
+<p>Expected on every port: <code>method=POST post_fields=2 files=1</code></p>
+
+<h3>5.4 SAPI and Apache MPM</h3>
+<div class="block nolabel"><pre><code>for b in 8.2 8.3 8.4 8.5; do printf "$b  "; docker exec php2shell-$b apachectl -V 2&gt;/dev/null | grep 'Server MPM'; done</code></pre></div>
+<p>Expected: <code>Server MPM: prefork</code> for all four. With <code>SAPI=apache2handler</code> from 5.2, this confirms mod_php on prefork.</p>
+
+<h3>Pass criteria</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Check</th><th>Pass</th></tr></thead>
+<tbody>
+<tr><td>Container status</td><td><span class="ok">Up</span>, bound to 127.0.0.1</td></tr>
+<tr><td><code>PHP_VERSION</code></td><td>8.2.34 / 8.3.35 / 8.4.26 / 8.5.11, i.e. below the fixed release</td></tr>
+<tr><td><code>SAPI</code></td><td><code>apache2handler</code></td></tr>
+<tr><td>Settings</td><td>Match the table in section 1</td></tr>
+<tr><td>Multipart POST</td><td><code>post_fields=2 files=1</code></td></tr>
+<tr><td>MPM</td><td><code>prefork</code></td></tr>
+</tbody></table></div>
+
+<h2 id="compare">6. Optional: patched and mitigated comparisons</h2>
+<p>Useful as a control when testing detection rules or WAF signatures: same setup, one variable changed.</p>
+
+<h3>Patched control</h3>
+<p>Build the same folder on the fixed release. Example for 8.3 on port 9083:</p>
+<div class="block nolabel"><pre><code>sed 's/php:8.3.35-apache/php:8.3.36-apache/' php-8.3/Dockerfile &gt; php-8.3/Dockerfile.patched
+docker build -t php2shell-lab:8.3-patched -f php-8.3/Dockerfile.patched php-8.3
+docker run -d --name php2shell-8.3-patched -p 127.0.0.1:9083:80 php2shell-lab:8.3-patched
+curl -s http://127.0.0.1:9083/ | head -1     # PHP_VERSION=8.3.36</code></pre></div>
+<p>Fixed tags: <code>8.2.35</code>, <code>8.3.36</code>, <code>8.4.27</code>, <code>8.5.12</code>.</p>
+
+<h3>Mitigated control (vulnerable version, workaround settings)</h3>
+<p>Overrides the ini at run time with the advisory workarounds. These reduce but do not remove exposure.</p>
+<div class="block nolabel"><pre><code>cat &gt; /tmp/mitigate.ini &lt;&lt;'EOF'
+session.upload_progress.enabled = Off
+fatal_error_backtraces = Off
+EOF
+docker run -d --name php2shell-8.5-mitigated -p 127.0.0.1:9085:80 \
+  -v /tmp/mitigate.ini:/usr/local/etc/php/conf.d/zzz-mitigate.ini:ro php2shell-lab:8.5
+curl -s http://127.0.0.1:9085/ | grep -E 'upload_progress|backtraces'   # both '0' or ''</code></pre></div>
+
+<h2 id="trouble">7. Troubleshooting</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Symptom</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td><code>port is already allocated</code></td><td>Another service uses 808x. Change the host port in <code>run.sh</code> (<code>-p 127.0.0.1:NEWPORT:80</code>).</td></tr>
+<tr><td><code>manifest unknown</code> on build</td><td>The image tag was removed from Docker Hub. Pull it from a mirror, or build PHP from source at that version.</td></tr>
+<tr><td><code>curl: (7) Failed to connect</code></td><td>Container exited. Check <code>docker logs php2shell-8.x</code>.</td></tr>
+<tr><td>Settings differ from section 1</td><td>The ini was not copied. Rebuild without cache: <code>docker build --no-cache …</code></td></tr>
+<tr><td>Need access from another VM</td><td>Bind to that isolated network's interface IP instead of 127.0.0.1. Never <code>0.0.0.0</code> on an internet-facing host.</td></tr>
+</tbody></table></div>
+
+<h2 id="cleanup">8. Stop and clean up</h2>
+<div class="block nolabel"><pre><code>./stop.sh                                              # remove the four containers
+docker rm -f php2shell-8.3-patched php2shell-8.5-mitigated 2&gt;/dev/null
+docker rmi php2shell-lab:8.2 php2shell-lab:8.3 php2shell-lab:8.4 php2shell-lab:8.5   # optional: remove images</code></pre></div>
+
+</main>
+<script>
+document.querySelectorAll('.block').forEach(function (b) {
+  var btn = document.createElement('button');
+  btn.className = 'copy'; btn.type = 'button'; btn.textContent = 'Copy';
+  btn.addEventListener('click', function () {
+    var text = b.querySelector('pre').innerText;
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1200); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {});
+  });
+  b.appendChild(btn);
+});
+</script>
+</body>
+</html>
