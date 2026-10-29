@@ -1,6 +1,6 @@
 <div align="center">
 
-![php2shell — pre-auth RCE lab & toolkit](docs/img/banner.png)
+![php2shell — pre-auth RCE lab & toolkit](docs/img/header.png)
 
 # php2shell
 
